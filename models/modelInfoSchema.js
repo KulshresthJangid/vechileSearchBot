@@ -1,10 +1,8 @@
 const mongoose = require('mongoose')
-const CompanyName = require('./companyNameSchema')
 
 const modelInfoSchema = new mongoose.Schema({
     manufacturer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'CompanyName'
+        type: String
     },
     modelName: {
         type: String

@@ -1,10 +1,10 @@
 const express = require('express')
 const mongoose = require('mongoose')
-const CompanyName = require('../models/companyNameSchema')
 const ModelInfo = require('../models/modelInfoSchema')
-const Questions = require('../models/questions')
+const CompanyName = require('../models/companyNameSchema')
+const Question = require('../models/questions')
 const UserResponse = require('../models/questions')
-const { getCompanyNameObjectId, deleteCompanyName, getAllCompanies } = require('../utils/utils')
+const { getCompanyNameObjectId, getAllCompaniesNames, getAllModelNames, deleteVechileInfo, getAllTypeNames, deleteQuestions, deleteCompanyByName } = require('../utils/utils')
 const router = express.Router()
 
 router.get('/', (req, res) => {
@@ -18,57 +18,56 @@ router.post('/spreadSheetData', async (req, res) => {
     console.log(sheet_name)
     let content = req.body.data
     let rowName = content[0][0]
-    content.shift()
-    console.log(content, sheet_name)
-    console.log(content[0][0])
-    console.log("Row Name------",rowName)
-    switch (rowName) {
-        case "company name":
-            try {
-                let allCompanyLists = await getAllCompanies()
-                console.log("----------Hey",allCompanyLists)
-                for (let index = 0; index < content.length; index++)  {
-                    const details = new CompanyName()
-                    details.name = content[index][0]
-                    let character = details.name
-                    if (characterLength != 0) {
-                        details.save().then(() => {
-                            res.send({
-                                message: "Your data saved successfully",
-                                error: false
-                            })
-                            console.log("Data saved successfully")
-                        })
-                    } else {
-                        console.log("empty string")
-                    }                 
+    content.shift()   
+    try {
+        let companiesNames = await getAllCompaniesNames()
+        let modelNames = await getAllModelNames()
+        let typeNames = await getAllTypeNames() 
+        for (let index = 0; index < content.length; index++) {
+            await deleteVechileInfo(companiesNames[index], modelNames[index], typeNames[index])
+            await deleteCompanyByName(content[index][0])
+        }
+        for (let index = 0; index < content.length; index++) {
+            const details = new ModelInfo()
+            const companyNameDetails = new CompanyName()
+            companyNameDetails.name = content[index][0]
+            details.manufacturer = content[index][0]
+            details.modelName = content[index][1]
+            details.type = content[index][2]
+            await details.save()
+            await companyNameDetails.save(function (err, data) {
+                if (err) {
+                    console.log("Error while saving the company name.",err)
                 }
-            } catch (e) {
-                res.status(400).send({
-                    error: true,
-                    message: e.message
-                })
+            })
+        }
+        for (let index = 0; index < content.length; index++) {
+            await deleteQuestions(content[index][3])
+        }
+        for (let index = 0; index < content.length; index++) {
+            const questions = new Question()
+            questions.message = content[index][3]
+            questions.type = content[index][4]
+            questions.wrongDataError = content[index][5]
+            let message = questions.message
+            let type = questions.type
+            // let wrong = questions.wrongDataError
+            if (message.length != 0 && type.length != 0) {
+               await questions.save()
             }
-            break;
-        case "model name": 
-            try {
-                for (let index = 0; index < content.length; index++) {
-                    const details = new ModelInfo()
-                    
-                    details.modelName = content[index][1]
-                    details.type = content[index][2]
+            console.log("")
+        }
+        res.status(200).send({
+            error: false,
+            message: "Data saved Successfully"
+        })
 
-                    
-                }
-            } catch (e) {
-                res.status(400).send({
-                    error: true,
-                    message: e.message
-                })
-            }
-    
-        default:
-            break;
+    } catch (e) {
+        res.status(400).send({
+            error: true,
+            message: e.message
+        })
+        console.log("Error while saving the spreadsheet data", e)
     }
 })
 
