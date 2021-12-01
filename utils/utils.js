@@ -257,7 +257,15 @@ async function deleteUser (phoneNumber) {
 
 async function getAllModelTypesByModelName (name) {
   return new Promise((resolve, reject) => {
-    ModelInfo.find({  })
+    ModelInfo.find({modelName: name}, { type: 1 }, function(err, data) {
+      if(err) {
+        console.log("Error while getting modelnames", err)
+        reject(err)
+      } else {
+        console.log("Model names found")
+        resolve(data.map(value => value.type))
+      }
+    })
   })
 }
 
@@ -292,6 +300,20 @@ async function getUserSelectedManufacturer(phoneNumber) {
   })
 }
 
+async function getUserSelectedModelName(phoneNumber) {
+  return new Promise((resolve, reject) => {
+    UserResponse.find({ phoneNumber }, { selectedModelName: 1 }, function (err, data) {
+      if (err) {
+        console.log("Error while getting the getUserSelectedModelName", err)
+        reject(err)
+      } else {
+        console.log("userSelectedModelName is found")
+        resolve(data.map(value => value.selectedModelName))
+      }
+    })
+  })
+}
+
 async function saveUserSelectedModelName (phoneNumber, modelName) {
   return new Promise((resolve, reject) => {
     UserResponse.findOneAndUpdate({ phoneNumber }, { selectedModelName: modelName }, function(err, data) {
@@ -320,6 +342,20 @@ async function saveUserSelectedModelType (phoneNumber, modelType) {
   })
 }
 
+async function getUserSelectedModelType (phoneNumber) {
+  return new Promise((resolve, reject) => {
+    UserResponse.find({ phoneNumber }, { selectedModelType: 1 }, function (err, data) {
+      if (err) {
+        console.log("Error while getting the getUserSelectedModelName", err)
+        reject(err)
+      } else {
+        console.log("userSelectedModelName is found")
+        resolve(data.map(value => value.selectedModelType))
+      }
+    })
+  })
+}
+
 module.exports = {
   getCompanyNameObjectId,
   deleteVechileInfo,
@@ -342,5 +378,8 @@ module.exports = {
   getAllModelTypesByModelNameWithIndex,
   getUserSelectedManufacturer,
   saveUserSelectedModelName,
-  saveUserSelectedModelType
+  saveUserSelectedModelType,
+  getUserSelectedModelName,
+  getUserSelectedModelType
+  
 }

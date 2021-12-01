@@ -23,13 +23,18 @@ const {
   getAllModelTypesByModelName,
   getAllModelTypesByModelNameWithIndex,
   getUserSelectedManufacturer,
-  saveUserSelectedModelName
+  saveUserSelectedModelName,
+  getUserSelectedModelName,
+  saveUserSelectedModelType,
+  getUserSelectedModelType
 } = require("../utils/utils");
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
   let message = req.body.message
   let phoneNumber = req.body.phoneNumber
+  let returnToMainMenu = await findQuestion('returnToMainMenu')
+  let temp = returnToMainMenu.message
   if (message === "HII" || message === "hii") {
     let firstQuestion = await sendFirstQuestion();
     let menu = await allCompaniesListWithIndex();
@@ -43,7 +48,7 @@ router.post("/webhook", async (req, res) => {
     userResponse.selectedModelName = ''
     userResponse.selectedModelType = ''
     await userResponse.save()
-    res.send(firstQuestion + '\n' +menu.join("\n"));
+    res.send(firstQuestion + '\n' +menu.join("\n") + '\n' + temp);
   }
   else if(message === "*") {
     await deleteUser(phoneNumber)
@@ -52,7 +57,7 @@ router.post("/webhook", async (req, res) => {
   }
   else if(!isNaN(message)) {
     let allCompanies = await getAllCompaniesNames()
-    console.log("------------ HERE is the all companuie")
+    console.log("------------ HERE is the all companies", allCompanies)
     let selectedCompany = allCompanies[message]
     await saveUserSelectedCompany(phoneNumber, selectedCompany)
     let user = await currentUser(phoneNumber)
@@ -65,14 +70,21 @@ router.post("/webhook", async (req, res) => {
         let nextQuestion = question.message
         console.log("Here is list of all the available models", menu)
         await updateCurrentQuestionAsked(phoneNumber, 2)
-        res.send(nextQuestion + '\n' + menu.join('\n'))
+        res.send(nextQuestion + '\n' + menu.join('\n') + '\n' + temp)
         break;
       case 2: 
-        let allCompany = await getAllCompaniesNames()
-        let selectedCompany = await getUserSelectedManufacturer(phoneNumber)
-        let a = await getAllModelTypesByModelName(selectedCompany[0])
-        let menu2 = await getAllModelTypesByModelNameWithIndex(selectedCompany[0])
-        res.send(a)
+        let allComp = await getAllCompaniesNames()
+        let userSelectedComp = await getUserSelectedManufacturer(phoneNumber)
+        let listOfModelNamesTwo = await companyModelNames(userSelectedComp[0])
+        let selectedOptionTwo = listOfModelNamesTwo[message]
+        console.log("------------------", selectedOptionTwo)
+        // user the userSelectedComp[0] to get access the userSelectedComp
+        let secondMenu = await getAllModelTypesByModelNameWithIndex(selectedOptionTwo)
+        let questionTwo = await findQuestion('askModelType')
+        let nextQuestionTwo = questionTwo.message
+        await updateCurrentQuestionAsked(phoneNumber, 3)
+        await saveUserSelectedModelName(phoneNumber, selectedOptionTwo)
+        res.send(nextQuestionTwo + '\n' + secondMenu.join('\n') + '\n' + temp)
 
         // let allCompany = await getAllCompaniesNames()
         // let selectedCompany = await getUserSelectedManufacturer(phoneNumber)
@@ -83,7 +95,17 @@ router.post("/webhook", async (req, res) => {
         // res.send(nextQuestion + '\n' + menu.join('\n'))
         
         break;
-        
+        case 3: 
+          let userSelectedModelName = await getUserSelectedModelName(phoneNumber) 
+          let selectedModelType = await getAllModelTypesByModelName(userSelectedModelName)
+          await saveUserSelectedModelType(phoneNumber, selectedModelType[0])
+          let userSelectedModelType = await getUserSelectedModelType(phoneNumber)
+          console.log('-------------userSelectedModelType', userSelectedModelType)
+          let userSelectedManufacturer = await getUserSelectedManufacturer(phoneNumber)
+          
+          
+          res.send("Thank you for you time here is the details that you have choosen" + '\n' + "Vechile Manufacturer: " + userSelectedManufacturer + '\n' + "Vechile Model Name: " + userSelectedModelName + '\n' + "Vechile Model Type: " + userSelectedModelType)
+          break;
 
 
     
